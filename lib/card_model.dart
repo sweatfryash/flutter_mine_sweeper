@@ -34,14 +34,19 @@ class CardModel {
       ? const Text('💣')
       : num == 0
           ? null
-          : Text('$num', style: TextStyle(color: color));
+          : Text('$num',
+              style: TextStyle(color: color, fontWeight: FontWeight.bold));
 
-  Color get color{
-    switch (num){
+  Color get color {
+    switch (num) {
       case 1:
-        return Colors.blue;
+        return Colors.green;
       case 2:
-        return Colors.orange;
+        return Colors.blue;
+      case 3:
+        return Colors.deepOrange;
+      case 4:
+        return Colors.purple;
     }
     return Colors.red;
   }
