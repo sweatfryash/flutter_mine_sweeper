@@ -1,9 +1,11 @@
+import 'dart:html';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:mine_sweeper/card_model.dart';
 import 'package:mine_sweeper/game_config.dart';
 
 void main() {
+  window.document.onContextMenu.listen((evt) => evt.preventDefault());
   runApp(const MyApp());
 }
 
@@ -168,20 +170,23 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  void onSetFlag(int index) {
+    if (!cards[index].isOpened) {
+      setState(
+        () {
+          replaceIndexedCard(
+              index, cards[index].copyWith(isFlag: !cards[index].isFlag));
+        },
+      );
+    }
+  }
+
   Widget cardItem(BuildContext context, int index) {
     final CardModel model = cards[index];
     return GestureDetector(
       onTap: () => onCardTap(index),
-      onLongPress: () {
-        if (!model.isOpened) {
-          setState(
-            () {
-              replaceIndexedCard(
-                  index, cards[index].copyWith(isFlag: !cards[index].isFlag));
-            },
-          );
-        }
-      },
+      onLongPress: () => onSetFlag(index),
+      onSecondaryTap: () => onSetFlag(index),
       child: DefaultTextStyle(
         style: TextStyle(fontSize: gameBoardConfig.cardSize / 2),
         child: AnimatedContainer(
@@ -197,7 +202,7 @@ class _MyHomePageState extends State<MyHomePage> {
             borderRadius: BorderRadius.circular(5),
             boxShadow: const <BoxShadow>[
               BoxShadow(
-                color: Colors.black38,
+                color: Colors.black26,
                 blurRadius: 1,
                 spreadRadius: 1,
               )
@@ -236,7 +241,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Text(
                   '操作：\n'
                   '1.点击翻面\n'
-                  '2.长按插旗\n'
+                  '2.右键/长按插旗\n'
                   '3.重启重开游戏\n',
                   style: TextStyle(color: Colors.blue, fontSize: 30),
                 ),
