@@ -1,6 +1,7 @@
 import 'dart:html';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:mine_sweeper/card_model.dart';
 import 'package:mine_sweeper/game_config.dart';
 
@@ -30,7 +31,8 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage>
+    with SingleTickerProviderStateMixin {
   final GameBoardConfig gameBoardConfig = const GameBoardConfig();
   late final List<CardModel> cards = List.filled(
     gameBoardConfig.totalCount,
@@ -40,7 +42,33 @@ class _MyHomePageState extends State<MyHomePage> {
 
   bool hasBomb = false;
 
+  DateTime? startTime;
+
+  final ValueNotifier<Duration> durationFromStart =
+      ValueNotifier<Duration>(Duration.zero);
+  late final Ticker ticker = createTicker(_onTick);
+
   int get notOpenedCardCount => cards.where((e) => !e.isOpened).length;
+
+  @override
+  void initState() {
+    super.initState();
+    ticker.start();
+  }
+
+  @override
+  void dispose() {
+    ticker.dispose();
+    super.dispose();
+  }
+
+  ///[ticker]将会触发的回调
+  void _onTick(_) {
+    if (startTime != null) {
+      final DateTime now = DateTime.now();
+      durationFromStart.value = now.difference(startTime!);
+    }
+  }
 
   Iterable<int> getIndexesWithCenter(int centerIndex) {
     final bool isFirstColumn = centerIndex % gameBoardConfig.xCount == 0;
@@ -136,15 +164,18 @@ class _MyHomePageState extends State<MyHomePage> {
     final CardModel model = cards[index];
     if (!model.isOpened) {
       if (!hasBomb) {
+        startTime = DateTime.now();
         initBomb(index);
       }
       if (model.isBomb) {
+        startTime = null;
         setState(openAllCard);
         return showDialog(
           context: context,
           builder: (c) {
-            return const AlertDialog(
-              title: Text('失败'),
+            return AlertDialog(
+              title: Text('😵 失败,用时 '
+                  '${durationFromStart.value.toStringAsMyFormat()}'),
             );
           },
         );
@@ -155,12 +186,14 @@ class _MyHomePageState extends State<MyHomePage> {
         openCard(index);
       }
       if (notOpenedCardCount == gameBoardConfig.bombCount) {
+        startTime = null;
         setState(openAllCard);
         return showDialog(
           context: context,
           builder: (c) {
-            return const AlertDialog(
-              title: Text('成功'),
+            return AlertDialog(
+              title: Text('🎉 成功,用时 '
+                  '${durationFromStart.value.toStringAsMyFormat()}'),
             );
           },
         );
@@ -236,15 +269,30 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         child: Row(
           children: <Widget>[
-            const Expanded(
-              child: Center(
-                child: Text(
-                  '操作：\n'
-                  '1.点击翻面\n'
-                  '2.右键/长按插旗\n'
-                  '3.重启重开游戏\n',
-                  style: TextStyle(color: Colors.blue, fontSize: 30),
-                ),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  const Text(
+                    '操作：\n'
+                    '1.点击翻面\n'
+                    '2.右键/长按插旗\n'
+                    '3.重启重开游戏\n',
+                    style: TextStyle(color: Colors.blue, fontSize: 30),
+                  ),
+                  ValueListenableBuilder(
+                    valueListenable: durationFromStart,
+                    builder: (BuildContext context, Duration value, _) {
+                      return Text(
+                        '用时：${value.toStringAsMyFormat()}',
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontSize: 30,
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
             gameBoard(context),
@@ -253,5 +301,19 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
     );
+  }
+}
+
+extension DurationExtension on Duration {
+  String toStringAsMyFormat() {
+    String res = toString();
+    res = res.substring(0, res.length - 4);
+    int hour = inHours;
+    if (hour == 0) {
+      res = res.substring(2);
+    } else if (hour < 10) {
+      res = '0$res';
+    }
+    return res;
   }
 }
