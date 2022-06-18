@@ -42,12 +42,14 @@ class _MyHomePageState extends State<MyHomePage>
 
   bool hasBomb = false;
 
+  /// 点击第一个卡片的时间，用来计算游戏耗时
   DateTime? startTime;
 
   final ValueNotifier<Duration> durationFromStart =
       ValueNotifier<Duration>(Duration.zero);
   late final Ticker ticker = createTicker(_onTick);
 
+  /// 未开启的卡片的数量，未开启卡片数量等于炸弹数游戏成功
   int get notOpenedCardCount => cards.where((e) => !e.isOpened).length;
 
   @override
@@ -70,6 +72,7 @@ class _MyHomePageState extends State<MyHomePage>
     }
   }
 
+  /// 返回以[centerIndex]为中心的九宫格的index列表
   Iterable<int> getIndexesWithCenter(int centerIndex) {
     final bool isFirstColumn = centerIndex % gameBoardConfig.xCount == 0;
     final bool isLastColumn =
@@ -94,6 +97,7 @@ class _MyHomePageState extends State<MyHomePage>
     cards[index] = newModel;
   }
 
+  /// 初始化炸弹位置
   void initBomb(int clickIndex) {
     hasBomb = true;
     final List<int> allIndexes = List.generate(cards.length, (index) => index);
@@ -134,6 +138,7 @@ class _MyHomePageState extends State<MyHomePage>
     replaceIndexedCard(index, cards[index].copyWith(isOpened: true));
   }
 
+  /// 开启空格子会自动开启[index]为中心的九宫格内其他所有格子
   void openEmptyCard(int index) {
     openCard(index);
     final Iterable<int> areaIndexes = getIndexesWithCenter(index);
@@ -216,44 +221,44 @@ class _MyHomePageState extends State<MyHomePage>
       onTap: () => onCardTap(index),
       onLongPress: () => onSetFlag(index),
       onSecondaryTap: () => onSetFlag(index),
-      child: DefaultTextStyle(
-        style: TextStyle(fontSize: gameBoardConfig.cardSize / 2),
-        child: AnimatedContainer(
-          width: gameBoardConfig.cardSize,
-          height: gameBoardConfig.cardSize,
-          duration: kThemeChangeDuration,
-          decoration: BoxDecoration(
-            color: model.isOpened
-                ? model.num == 0
-                    ? Colors.grey.shade200
-                    : Colors.white
-                : Theme.of(context).primaryColor,
-            borderRadius: BorderRadius.circular(5),
-            boxShadow: const <BoxShadow>[
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 1,
-                spreadRadius: 1,
-              )
-            ],
-          ),
-          child: model.isOpened
-              ? Center(child: model.openedChild)
-              : Center(child: model.notOpenedChild),
+      child: AnimatedContainer(
+        width: gameBoardConfig.cardSize,
+        height: gameBoardConfig.cardSize,
+        duration: kThemeChangeDuration,
+        decoration: BoxDecoration(
+          color: model.isOpened
+              ? model.num == 0
+                  ? Colors.grey.shade200
+                  : Colors.white
+              : Theme.of(context).primaryColor,
+          borderRadius: BorderRadius.circular(5),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 1,
+              spreadRadius: 1,
+            )
+          ],
         ),
+        child: model.isOpened
+            ? Center(child: model.openedChild)
+            : Center(child: model.notOpenedChild),
       ),
     );
   }
 
   Widget gameBoard(BuildContext context) {
-    return SizedBox(
-      width: gameBoardConfig.boardWidth,
-      child: Wrap(
-        spacing: gameBoardConfig.xSpacing,
-        runSpacing: gameBoardConfig.ySpacing,
-        children: List.generate(
-          cards.length,
-          (int index) => cardItem(context, index),
+    return DefaultTextStyle(
+      style: TextStyle(fontSize: gameBoardConfig.cardSize / 2),
+      child: SizedBox(
+        width: gameBoardConfig.boardWidth,
+        child: Wrap(
+          spacing: gameBoardConfig.xSpacing,
+          runSpacing: gameBoardConfig.ySpacing,
+          children: List.generate(
+            cards.length,
+            (int index) => cardItem(context, index),
+          ),
         ),
       ),
     );
