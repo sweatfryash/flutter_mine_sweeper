@@ -91,11 +91,7 @@ class _MyHomePageState extends State<MyHomePage>
   }
 
   void replaceIndexedCard(int index, CardModel newModel) {
-    cards.replaceRange(
-      index,
-      index + 1,
-      <CardModel>[newModel],
-    );
+    cards[index] = newModel;
   }
 
   void initBomb(int clickIndex) {
