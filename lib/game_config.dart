@@ -21,4 +21,22 @@ class GameBoardConfig {
   int get totalCount => xCount * yCount;
 
   double get boardWidth => xCount * cardSize + (xCount - 1) * xSpacing;
+
+  GameBoardConfig copyWith({
+    int? bombCount,
+    int? xCount,
+    int? yCount,
+    double? cardSize,
+    double? xSpacing,
+    double? ySpacing,
+  }) {
+    return GameBoardConfig(
+      bombCount: bombCount ?? this.bombCount,
+      xCount: xCount ?? this.xCount,
+      yCount: yCount ?? this.yCount,
+      cardSize: cardSize ?? this.cardSize,
+      xSpacing: xSpacing ?? this.xSpacing,
+      ySpacing: ySpacing ?? this.ySpacing,
+    );
+  }
 }

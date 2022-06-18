@@ -1,17 +1,21 @@
 import 'dart:html';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:mine_sweeper/card_model.dart';
 import 'package:mine_sweeper/game_config.dart';
 
 void main() {
-  window.document.onContextMenu.listen((evt) => evt.preventDefault());
+  if (kIsWeb) {
+    window.document.onContextMenu.listen((evt) => evt.preventDefault());
+  }
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -33,8 +37,12 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage>
     with SingleTickerProviderStateMixin {
-  final GameBoardConfig gameBoardConfig = const GameBoardConfig();
-  late final List<CardModel> cards = List.filled(
+  final ValueNotifier<GameBoardConfig> gameBoardConfigNotifier =
+      ValueNotifier<GameBoardConfig>(const GameBoardConfig());
+
+  GameBoardConfig get gameBoardConfig => gameBoardConfigNotifier.value;
+
+  late List<CardModel> cards = List.filled(
     gameBoardConfig.totalCount,
     const CardModel(),
     growable: true,
@@ -233,11 +241,7 @@ class _MyHomePageState extends State<MyHomePage>
               : Theme.of(context).primaryColor,
           borderRadius: BorderRadius.circular(5),
           boxShadow: const <BoxShadow>[
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 1,
-              spreadRadius: 1,
-            )
+            BoxShadow(color: Colors.black26, blurRadius: 1, spreadRadius: 1)
           ],
         ),
         child: model.isOpened
@@ -248,19 +252,107 @@ class _MyHomePageState extends State<MyHomePage>
   }
 
   Widget gameBoard(BuildContext context) {
-    return DefaultTextStyle(
-      style: TextStyle(fontSize: gameBoardConfig.cardSize / 2),
-      child: SizedBox(
-        width: gameBoardConfig.boardWidth,
-        child: Wrap(
-          spacing: gameBoardConfig.xSpacing,
-          runSpacing: gameBoardConfig.ySpacing,
-          children: List.generate(
-            cards.length,
-            (int index) => cardItem(context, index),
+    return ValueListenableBuilder(
+      valueListenable: gameBoardConfigNotifier,
+      builder: (BuildContext c, GameBoardConfig config, Widget? child) {
+        // 重新生成cards
+        if (config.totalCount != cards.length) {
+          cards = List.filled(
+            gameBoardConfig.totalCount,
+            const CardModel(),
+            growable: true,
+          );
+        }
+        return DefaultTextStyle(
+          style: TextStyle(fontSize: config.cardSize / 2),
+          child: SizedBox(
+            width: config.boardWidth,
+            child: Wrap(
+              spacing: config.xSpacing,
+              runSpacing: config.ySpacing,
+              children: List.generate(
+                cards.length,
+                (int index) => cardItem(context, index),
+              ),
+            ),
           ),
-        ),
+        );
+      },
+    );
+  }
+
+  /// 调整配置信息
+  Widget configWidget(BuildContext context) {
+    return DefaultTextStyle.merge(
+      style: const TextStyle(height: 1),
+      child: ValueListenableBuilder(
+        valueListenable: gameBoardConfigNotifier,
+        builder: (BuildContext c, GameBoardConfig value, Widget? child) {
+          return Column(
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  const Text(
+                    '炸弹数量：',
+                  ),
+                  Slider(
+                    value: value.bombCount.toDouble(),
+                    onChanged: (double v) {
+                      gameBoardConfigNotifier.value =
+                          value.copyWith(bombCount: v.round());
+                    },
+                    divisions: 50,
+                    min: 1,
+                    max: 50,
+                  ),
+                  Text(value.bombCount.toString().padLeft(2, '0')),
+                ],
+              ),
+              Row(
+                children: <Widget>[
+                  const Text('横向数量：'),
+                  Slider(
+                    value: value.xCount.toDouble(),
+                    onChanged: (double v) {
+                      gameBoardConfigNotifier.value =
+                          value.copyWith(xCount: v.round());
+                    },
+                    divisions: 18,
+                    min: 6,
+                    max: 18,
+                  ),
+                  Text(value.xCount.toString().padLeft(2, '0')),
+                ],
+              ),
+              Row(
+                children: <Widget>[
+                  const Text('竖向数量：'),
+                  Slider(
+                    value: value.yCount.toDouble(),
+                    onChanged: (double v) {
+                      gameBoardConfigNotifier.value =
+                          value.copyWith(yCount: v.round());
+                    },
+                    divisions: 12,
+                    min: 6,
+                    max: 12,
+                  ),
+                  Text(value.yCount.toString().padLeft(2, '0')),
+                ],
+              ),
+            ],
+          );
+        },
       ),
+    );
+  }
+
+  Widget gameDuration(BuildContext context) {
+    return ValueListenableBuilder(
+      valueListenable: durationFromStart,
+      builder: (BuildContext context, Duration value, _) {
+        return Text('用时：${value.toStringAsMyFormat()}');
+      },
     );
   }
 
@@ -268,37 +360,36 @@ class _MyHomePageState extends State<MyHomePage>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  const Text(
-                    '操作：\n'
-                    '1.点击翻面\n'
-                    '2.右键/长按插旗\n'
-                    '3.重启重开游戏\n',
-                    style: TextStyle(color: Colors.blue, fontSize: 30),
-                  ),
-                  ValueListenableBuilder(
-                    valueListenable: durationFromStart,
-                    builder: (BuildContext context, Duration value, _) {
-                      return Text(
-                        '用时：${value.toStringAsMyFormat()}',
-                        style: const TextStyle(
-                          color: Colors.blue,
-                          fontSize: 30,
-                        ),
-                      );
-                    },
-                  ),
-                ],
+        child: DefaultTextStyle(
+          style: TextStyle(fontSize: 30, color: Theme.of(context).primaryColor),
+          child: Row(
+            children: <Widget>[
+              const Spacer(),
+              Expanded(
+                flex: 6,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    configWidget(context),
+                    const SizedBox(width: 200, child: Divider(height: 30)),
+                    gameDuration(context),
+                    const SizedBox(width: 200, child: Divider(height: 30)),
+                    const Text(
+                      '操作：\n'
+                      '1.点击翻面\n'
+                      '2.右键/长按插旗\n'
+                      '3.重启重开游戏\n',
+                      style: TextStyle(color: Colors.green),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            gameBoard(context),
-            const Spacer(),
-          ],
+              const Spacer(),
+              gameBoard(context),
+              const Spacer(),
+            ],
+          ),
         ),
       ),
     );
